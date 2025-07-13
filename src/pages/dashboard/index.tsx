@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Navbar from "../../components/navbar";
 import Container from "../../components/Container";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { User, users } from "../../constant/mockUsers";
 import Modal from "../../components/modal";
 import { FiEdit, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
@@ -20,7 +20,6 @@ const Dashboard = () => {
   const [allUsers, setAllUsers] = useState<User[] | null>(null);
   
   const itemsPerPage = 5;
-  const navigate = useNavigate();
 
   useEffect(() => {
     const userFromStorage = localStorage.getItem("activeUser");

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
@@ -15,6 +15,8 @@ const userFormSchema = z.object({
   role: z.string().min(1, "Posisi wajib dipilih."),
 });
 
+type UserFormData = z.infer<typeof userFormSchema>;
+
 const availableRoles = [
   "Frontend Engineer", "UI/UX Designer", "Backend Specialist", "Product Manager",
   "DevOps Engineer", "QA Engineer", "Data Analyst", "Fullstack Developer",
@@ -24,13 +26,14 @@ const availableRoles = [
 
 const UpdateUser = () => {
   useAuthGuard();
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm({
-    resolver: zodResolver(userFormSchema),
-  });
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = 
+    useForm<UserFormData>({
+      resolver: zodResolver(userFormSchema),
+    });
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const updateExistingUser = (data: z.infer<typeof userFormSchema>) => {
+  const updateExistingUser = (data: UserFormData) => {
     return new Promise((resolve) => {
       setTimeout(() => {
         const storedData = localStorage.getItem("allUsersData");
@@ -47,7 +50,7 @@ const UpdateUser = () => {
     });
   };
 
-  const onFormSubmit = (values: z.infer<typeof userFormSchema>) => {
+  const onFormSubmit: SubmitHandler<UserFormData> = (values) => {
     const updatePromise = updateExistingUser(values);
     toast.promise(updatePromise, {
       loading: "Memperbarui data...",
@@ -82,12 +85,12 @@ const UpdateUser = () => {
               <div>
                 <label htmlFor="name" className="block mb-2 text-sm font-medium">Nama Lengkap</label>
                 <input id="name" {...register("name")} className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"/>
-                {errors.name?.message && <p className="text-xs text-red-500 mt-2">{errors.name.message}</p>}
+                {errors.name && <p className="text-xs text-red-500 mt-2">{errors.name.message}</p>}
               </div>
               <div>
                 <label htmlFor="company" className="block mb-2 text-sm font-medium">Perusahaan</label>
                 <input id="company" {...register("company")} className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"/>
-                {errors.company?.message && <p className="text-xs text-red-500 mt-2">{errors.company.message}</p>}
+                {errors.company && <p className="text-xs text-red-500 mt-2">{errors.company.message}</p>}
               </div>
               <div>
                 <label htmlFor="role" className="block mb-2 text-sm font-medium">Posisi</label>
@@ -97,7 +100,7 @@ const UpdateUser = () => {
                     <option key={role} value={role} className="bg-white dark:bg-gray-800">{role}</option>
                   ))}
                 </select>
-                {errors.role?.message && <p className="text-xs text-red-500 mt-2">{errors.role.message}</p>}
+                {errors.role && <p className="text-xs text-red-500 mt-2">{errors.role.message}</p>}
               </div>
               <div className="pt-4 text-right">
                 <button type="submit" disabled={isSubmitting} className="bg-indigo-600 text-white rounded-lg px-5 py-2.5 hover:bg-indigo-700 disabled:opacity-50 font-semibold">
