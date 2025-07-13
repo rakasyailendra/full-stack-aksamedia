@@ -1,54 +1,73 @@
-<<<<<<< HEAD
-# React + TypeScript + Vite
+# Admin Dashboard - User Management
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Ini adalah proyek dashboard untuk manajemen pengguna yang dibuat sebagai bagian dari tes seleksi **Frontend Developer Intern**. Proyek ini menampilkan implementasi operasi CRUD, sistem autentikasi, dan berbagai fitur interaktif lainnya menggunakan React dan Tailwind CSS, tanpa menggunakan library UI eksternal.
 
-Currently, two official plugins are available:
+**[ Lihat Live Demo ](https://ganti-dengan-url-deploy-anda.com)** 
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## Fitur Utama
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- **Sistem Autentikasi**:
+  - Fitur Login tanpa perlu registrasi (kredensial statis).
+  - Sesi pengguna tetap aktif (persisten) menggunakan Local Storage hingga logout manual.
+  - Nama pengguna yang login ditampilkan di navbar.
 
-- Configure the top-level `parserOptions` property like this:
+- **Manajemen Pengguna (CRUD)**:
+  - **Create**: Menambah data pengguna baru melalui form.
+  - **Read**: Menampilkan semua data pengguna dalam format tabel yang rapi.
+  - **Update**: Mengedit data pengguna yang sudah ada.
+  - **Delete**: Menghapus data pengguna dengan konfirmasi modal.
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+- **Fitur Tabel Interaktif**:
+  - **Pencarian**: Mencari pengguna berdasarkan nama.
+  - **Filter**: Menyaring pengguna berdasarkan peran (role).
+  - **Paginasi**: Menampilkan data secara bertahap (5 data per halaman).
+  - State (halaman, pencarian, filter) disimpan di URL *query string* sehingga tidak hilang saat halaman di-refresh.
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+- **Fitur Tambahan**:
+  - **Mode Tampilan**: Tiga pilihan mode (Light, Dark, dan System) yang dapat mengikuti tema OS secara *real-time*.
+  - **Halaman Dilindungi**: Semua halaman (kecuali Login) tidak bisa diakses sebelum autentikasi.
+  - **Edit Profil**: Halaman khusus untuk mengubah nama pengguna yang sedang login.
+  - **Desain Responsif**: Tampilan yang menyesuaikan diri dengan berbagai ukuran layar (desktop, tablet, mobile).
+  - **Notifikasi Toast**: Memberikan feedback kepada pengguna untuk setiap aksi (login, logout, create, update).
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+---
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
-=======
-# Frond-end-aksamedia-test
->>>>>>> 6af519f300cee6578fbb3a5bdb197292bc9bc1b9
+## Teknologi yang Digunakan
+
+- **Framework**: React.js (dengan Vite)
+- **Bahasa**: TypeScript
+- **Styling**: Tailwind CSS
+- **Routing**: React Router DOM
+- **Manajemen Form**: React Hook Form
+- **Validasi Skema**: Zod
+- **Notifikasi**: React Hot Toast
+- **Ikon**: React Icons
+
+---
+
+## Cara Menjalankan Secara Lokal
+
+Untuk menjalankan proyek ini di lingkungan lokal Anda, ikuti langkah-langkah berikut:
+
+1.  **Clone repository ini:**
+    ```bash
+    git clone [https://ganti-dengan-url-repo-anda.git](https://ganti-dengan-url-repo-anda.git)
+    ```
+
+2.  **Masuk ke direktori proyek:**
+    ```bash
+    cd nama-folder-proyek
+    ```
+
+3.  **Install semua dependensi:**
+    ```bash
+    npm install
+    ```
+
+4.  **Jalankan development server:**
+    ```bash
+    npm run dev
+    ```
+    Aplikasi akan berjalan di `http://localhost:5173`.
