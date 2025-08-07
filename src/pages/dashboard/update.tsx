@@ -1,154 +1,161 @@
-import React, { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import Navbar from "../../components/navbar";
+import Container from "../../components/Container";
 import { useAuthGuard } from "../../hooks/useAuthGuard";
+import axios from "axios";
 
 // --- Tipe Data ---
-interface Employee {
-  id: number;
-  name: string;
-  phone: string;
-  division: string;
-  position: string;
-  image: string;
+interface Division {
+    id: string;
+    name: string;
 }
 
-// --- Skema Validasi Zod ---
 const employeeFormSchema = z.object({
   name: z.string().min(3, "Nama lengkap minimal 3 karakter."),
-  phone: z.string().min(10, "Nomor telepon minimal 10 digit.").regex(/^\d+$/, "Hanya boleh angka."),
-  division: z.string().min(1, "Divisi wajib dipilih."),
-  position: z.string().min(3, "Jabatan minimal 3 karakter."),
-  image: z.string().url("URL gambar tidak valid.").optional().or(z.literal('')),
+  phone: z.string().min(10, "Nomor telepon minimal 10 digit."),
+  position: z.string().min(3, "Posisi minimal 3 karakter."),
+  division_id: z.string().min(1, "Divisi wajib dipilih."),
+  image: z.any().optional(),
 });
 
 type EmployeeFormData = z.infer<typeof employeeFormSchema>;
 
-// --- Opsi Divisi ---
-const availableDivisions = ["Mobile Apps", "QA", "Full Stack", "Backend", "Frontend", "UI/UX Designer"];
-
 const UpdateEmployeePage = () => {
-  useAuthGuard(); // Melindungi halaman
+  useAuthGuard();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [divisions, setDivisions] = useState<Division[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = 
     useForm<EmployeeFormData>({
       resolver: zodResolver(employeeFormSchema),
     });
 
-  // --- Memuat data pegawai yang akan diedit ---
+  const API_URL = import.meta.env.VITE_API_BASE_URL;
+  const authToken = localStorage.getItem('authToken');
+
   useEffect(() => {
-    const employeeId = parseInt(id, 10);
-    const storedData = localStorage.getItem("employees");
-    if (storedData) {
-      const employees: Employee[] = JSON.parse(storedData);
-      const userToUpdate = employees.find(emp => emp.id === employeeId);
-      if (userToUpdate) {
-        reset(userToUpdate); // Mengisi form dengan data yang ada
-      } else {
-        toast.error("Pegawai tidak ditemukan!");
-        navigate("/data-karyawan");
-      }
+    const fetchInitialData = async () => {
+        if (!id) return;
+        setIsLoading(true);
+        try {
+            const [employeeRes, divisionsRes] = await Promise.all([
+                axios.get(`${API_URL}/api/employees/${id}`, { headers: { Authorization: `Bearer ${authToken}` } }),
+                axios.get(`${API_URL}/api/divisions`, { headers: { Authorization: `Bearer ${authToken}` } })
+            ]);
+            
+            const employeeData = employeeRes.data.data;
+            // Memastikan division_id adalah string
+            const transformedData = {
+                ...employeeData,
+                division_id: employeeData.division?.id?.toString() || ''
+            };
+            reset(transformedData);
+            setDivisions(divisionsRes.data.data);
+        } catch (error) {
+            toast.error("Gagal memuat data untuk diedit.");
+            navigate('/data-karyawan');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchInitialData();
+  }, [id, reset, navigate, API_URL, authToken]);
+
+  const onUpdateSubmit: SubmitHandler<EmployeeFormData> = async (data) => {
+    if (!id) return;
+    
+    const formData = new FormData();
+    formData.append('name', data.name);
+    formData.append('phone', data.phone);
+    formData.append('position', data.position);
+    formData.append('division_id', data.division_id);
+    if (data.image && data.image[0]) {
+        formData.append('image', data.image[0]);
     }
-  }, [id, reset, navigate]);
+    formData.append('_method', 'PUT'); // Method spoofing
 
-  // --- Fungsi untuk menyimpan perubahan ke localStorage ---
-  const updateExistingEmployee = (data: EmployeeFormData) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const employeeId = parseInt(id, 10);
-        const storedData = localStorage.getItem("employees");
-        const employees: Employee[] = storedData ? JSON.parse(storedData) : [];
-        
-        const initial = data.name.charAt(0).toUpperCase();
-        const imageUrl = data.image || `https://placehold.co/40x40/6366f1/ffffff?text=${initial}`;
-
-        const updatedEmployees = employees.map(emp =>
-          emp.id === employeeId ? { ...emp, ...data, image: imageUrl } : emp
-        );
-        
-        localStorage.setItem("employees", JSON.stringify(updatedEmployees));
-        resolve("Data pegawai berhasil diperbarui!");
-      }, 1000); // Simulasi delay
-    });
+    const toastId = toast.loading("Menyimpan perubahan...");
+    try {
+        await axios.post(`${API_URL}/api/employees/${id}`, formData, {
+            headers: {
+                Authorization: `Bearer ${authToken}`,
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        toast.success("Data pegawai berhasil diperbarui.", { id: toastId });
+        setTimeout(() => navigate("/data-karyawan"), 1500);
+    } catch (error) {
+        toast.error("Gagal menyimpan perubahan.", { id: toastId });
+    }
   };
 
-  // --- Handler saat form disubmit ---
-  const onFormSubmit: SubmitHandler<EmployeeFormData> = (values) => {
-    const updatePromise = updateExistingEmployee(values);
-
-    toast.promise(updatePromise, {
-      loading: "Memperbarui data...",
-      success: (message) => `${message}`,
-      error: "Gagal memperbarui data.",
-    });
-
-    updatePromise.then(() => {
-      setTimeout(() => navigate("/data-karyawan"), 1500);
-    });
-  };
+  if (isLoading) {
+      return (
+        <>
+            <Navbar />
+            <Container>
+                <div className="text-center py-20">Memuat data...</div>
+            </Container>
+        </>
+      );
+  }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white dark:bg-slate-800/50 rounded-xl shadow-md p-6 sm:p-8 border border-slate-200 dark:border-slate-700">
-            <h2 className="text-2xl font-bold mb-1 text-slate-900 dark:text-white">Edit Data Pegawai</h2>
-            <p className="mb-6 text-slate-500 dark:text-slate-400">Perbarui informasi profil pegawai di bawah ini.</p>
-            
-            <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-5">
+    <>
+      <Navbar />
+      <Container>
+        <div className="max-w-2xl mx-auto pt-8">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-md p-8">
+            <h2 className="text-2xl font-bold mb-1 text-gray-900 dark:text-white">Edit Data Pegawai</h2>
+            <p className="mb-6 text-gray-500 dark:text-gray-400">Perbarui informasi pegawai di bawah ini.</p>
+            <form onSubmit={handleSubmit(onUpdateSubmit)} className="space-y-6">
               <div>
-                <label htmlFor="name" className="block mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">Nama Lengkap</label>
-                <input id="name" {...register("name")} className="w-full bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none border border-slate-300 dark:border-slate-600"/>
+                <label htmlFor="name" className="block mb-2 text-sm font-medium">Nama Lengkap</label>
+                <input id="name" {...register("name")} className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" placeholder="e.g. Budi Sanjaya"/>
                 {errors.name && <p className="text-xs text-red-500 mt-2">{errors.name.message}</p>}
               </div>
-              
               <div>
-                <label htmlFor="phone" className="block mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">No. Telepon</label>
-                <input id="phone" {...register("phone")} className="w-full bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none border border-slate-300 dark:border-slate-600"/>
+                <label htmlFor="phone" className="block mb-2 text-sm font-medium">No. Telepon</label>
+                <input id="phone" {...register("phone")} className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" placeholder="e.g. 08123456789"/>
                 {errors.phone && <p className="text-xs text-red-500 mt-2">{errors.phone.message}</p>}
               </div>
-
               <div>
-                <label htmlFor="division" className="block mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">Divisi</label>
-                <select id="division" {...register("division")} className="w-full bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none border border-slate-300 dark:border-slate-600">
-                  <option value="">Pilih Divisi</option>
-                  {availableDivisions.map(div => (
-                    <option key={div} value={div}>{div}</option>
-                  ))}
-                </select>
-                {errors.division && <p className="text-xs text-red-500 mt-2">{errors.division.message}</p>}
-              </div>
-
-              <div>
-                <label htmlFor="position" className="block mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">Jabatan</label>
-                <input id="position" {...register("position")} className="w-full bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none border border-slate-300 dark:border-slate-600"/>
+                <label htmlFor="position" className="block mb-2 text-sm font-medium">Jabatan</label>
+                <input id="position" {...register("position")} className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5" placeholder="e.g. Backend Developer"/>
                 {errors.position && <p className="text-xs text-red-500 mt-2">{errors.position.message}</p>}
               </div>
-              
-               <div>
-                <label htmlFor="image" className="block mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">URL Gambar (Opsional)</label>
-                <input id="image" {...register("image")} className="w-full bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none border border-slate-300 dark:border-slate-600" placeholder="Kosongkan untuk auto-generate"/>
-                {errors.image && <p className="text-xs text-red-500 mt-2">{errors.image.message}</p>}
+              <div>
+                <label htmlFor="division_id" className="block mb-2 text-sm font-medium">Divisi</label>
+                <select id="division_id" {...register("division_id")} className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                  <option value="">Pilih Divisi</option>
+                  {divisions.map(div => (
+                    <option key={div.id} value={div.id}>{div.name}</option>
+                  ))}
+                </select>
+                {errors.division_id && <p className="text-xs text-red-500 mt-2">{errors.division_id.message}</p>}
               </div>
-
-              <div className="pt-4 flex items-center justify-end gap-4">
-                 <Link to="/data-karyawan" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:underline">
-                    Batal
-                </Link>
-                <button type="submit" disabled={isSubmitting} className="bg-indigo-600 text-white rounded-lg px-5 py-2.5 hover:bg-indigo-700 disabled:opacity-50 font-semibold transition-colors">
-                  {isSubmitting ? "Memperbarui..." : "Simpan Perubahan"}
+               <div>
+                <label htmlFor="image" className="block mb-2 text-sm font-medium">Foto Profil (Opsional)</label>
+                <input type="file" id="image" {...register("image")} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/>
+              </div>
+              <div className="pt-4 text-right">
+                <button type="submit" disabled={isSubmitting} className="bg-indigo-600 text-white rounded-lg px-5 py-2.5 hover:bg-indigo-700 disabled:opacity-50">
+                  {isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
                 </button>
               </div>
             </form>
           </div>
         </div>
-    </div>
+      </Container>
+    </>
   );
 };
 
 export default UpdateEmployeePage;
-  

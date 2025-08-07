@@ -1,12 +1,35 @@
-import React, { useState, useEffect, useMemo } from 'react';
-// Mengganti react-router-dom dengan placeholder karena tidak tersedia di lingkungan ini
-// import { Link, useNavigate } from 'react-router-dom'; 
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom'; 
 import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, Briefcase, UserPlus, Zap, Plus, Settings, Search, CheckCircle, ArrowRight, Sun, Moon } from 'lucide-react';
+import { Users, Briefcase, UserPlus, Zap, Plus, Settings, Search, CheckCircle, ArrowRight } from 'lucide-react';
+import { useAuthGuard } from '../../hooks/useAuthGuard';
 
-// --- [SEMPURNA] Komponen Ikon Lucide yang Elegan ---
-// Menggunakan ikon dari pustaka 'lucide-react' untuk konsistensi dan kualitas.
+// --- Tipe Data ---
+interface StatCardProps {
+  ikon: React.ReactNode;
+  label: string;
+  nilai: string | number;
+  detail: string;
+  gradasi: string;
+}
+
+interface HeaderProps {
+    namaPengguna: string | null;
+}
+
+interface Employee {
+    id: string;
+    name: string;
+    role: string;
+    image: string;
+}
+
+interface RecentEmployeeListProps {
+    data: Employee[];
+}
+
+// --- Komponen Ikon ---
 const icons = {
   tim: <Users size={24} />,
   divisi: <Briefcase size={24} />,
@@ -19,324 +42,135 @@ const icons = {
   lihatSemua: <ArrowRight size={14} />,
 };
 
-// --- [SEMPURNA] Data Dummy & Fungsi Helper ---
-const dataPegawaiAwal = [
-    { id: 1, name: 'Ahmad Yani', role: 'Backend Developer', phone: '081234567890', initial: 'A', color: 'bg-sky-500' },
-    { id: 2, name: 'Budi Santoso', role: 'Mobile Developer', phone: '081234567891', initial: 'B', color: 'bg-emerald-500' },
-    { id: 3, name: 'Citra Lestari', role: 'Full Stack Developer', phone: '081234567892', initial: 'C', color: 'bg-violet-500' },
-    { id: 4, name: 'Dewi Anggraini', role: 'UI/UX Designer', phone: '081234567893', initial: 'D', color: 'bg-rose-500' },
-    { id: 5, name: 'Eka Prasetya', role: 'DevOps Engineer', phone: '081234567894', initial: 'E', color: 'bg-amber-500' },
+// --- Data Dummy & Fungsi Helper ---
+const dataPegawaiAwal: Employee[] = [
+    { id: '1', name: 'Ahmad Yani', role: 'Backend Developer', image: 'https://placehold.co/40x40/f87171/ffffff?text=A' },
+    { id: '2', name: 'Siti Mariah', role: 'Frontend Developer', image: 'https://placehold.co/40x40/facc15/ffffff?text=S' },
+    { id: '3', name: 'Budi Santoso', role: 'UI/UX Designer', image: 'https://placehold.co/40x40/4ade80/ffffff?text=B' },
 ];
 
-const dataChart = [
-  { name: 'Jan', Aktivitas: 2400 },
-  { name: 'Feb', Aktivitas: 1398 },
-  { name: 'Mar', Aktivitas: 9800 },
-  { name: 'Apr', Aktivitas: 3908 },
-  { name: 'Mei', Aktivitas: 4800 },
-  { name: 'Jun', Aktivitas: 3800 },
-  { name: 'Jul', Aktivitas: 4300 },
+const dataGrafik = [
+  { name: 'Jan', Karyawan: 30 },
+  { name: 'Feb', Karyawan: 35 },
+  { name: 'Mar', Karyawan: 45 },
+  { name: 'Apr', Karyawan: 48 },
+  { name: 'Mei', Karyawan: 50 },
+  { name: 'Jun', Karyawan: 55 },
+  { name: 'Jul', Karyawan: 60 },
 ];
 
-const dapatkanSapaan = () => {
-    const jam = new Date().getHours();
-    if (jam < 4) return "Selamat Malam";
-    if (jam < 11) return "Selamat Pagi";
-    if (jam < 15) return "Selamat Siang";
-    if (jam < 19) return "Selamat Sore";
-    return "Selamat Malam";
-}
-
-// --- [SEMPURNA] Komponen Skeleton yang Lebih Detail ---
-const SkeletonLoader = () => (
-    <div className="bg-slate-50 dark:bg-slate-950 font-sans p-4 sm:p-6 lg:p-8 animate-pulse">
-        <div className="flex justify-between items-center mb-8">
-            <div className="h-10 w-1/3 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
-            <div className="h-10 w-1/4 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
+// --- Komponen UI ---
+const StatCard = ({ ikon, label, nilai, detail, gradasi }: StatCardProps) => (
+    <div className={`p-6 rounded-2xl text-white shadow-lg transition-transform transform hover:-translate-y-1 ${gradasi}`}>
+        <div className="flex justify-between items-start">
+            <div className="bg-white/20 p-3 rounded-xl">{ikon}</div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-36 bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>)}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 h-96 bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>
-            <div className="lg:col-span-1 h-96 bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>
-        </div>
+        <p className="text-3xl font-bold mt-4">{nilai}</p>
+        <p className="text-sm opacity-80">{label}</p>
+        <p className="text-xs opacity-60 mt-2">{detail}</p>
     </div>
 );
 
-// --- [SEMPURNA] Komponen Kartu Statistik dengan Efek Halus ---
-const KartuStatistik = ({ ikon, label, nilai, detail, gradasi }) => (
-    <motion.div
-        className={`relative text-white p-6 rounded-2xl overflow-hidden shadow-lg ${gradasi}`}
-        variants={{
-            hidden: { opacity: 0, y: 20 },
-            visible: { opacity: 1, y: 0 }
-        }}
-        whileHover={{ y: -6, transition: { duration: 0.2, ease: "easeOut" } }}
-    >
-        <div className="absolute -top-4 -right-4 text-white/10">{React.cloneElement(ikon, { size: 80 })}</div>
-        <div className="relative z-10">
-            <div className="flex justify-between items-start">
-                <p className="font-medium text-white/90">{label}</p>
-                <div className="text-white/80">{ikon}</div>
-            </div>
-            <motion.p layout className="text-4xl font-bold mt-3">{nilai}</motion.p>
-            <p className="text-sm text-white/70 mt-1">{detail}</p>
-        </div>
-    </motion.div>
-);
-
-// --- [BARU] Komponen Header Halaman yang Canggih ---
-const PageHeader = ({ namaPengguna, darkMode, toggleDarkMode }) => (
-    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+const Header = ({ namaPengguna }: HeaderProps) => (
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-            <h1 className="text-3xl font-bold text-slate-800 dark:text-white">{dapatkanSapaan()}, {namaPengguna}!</h1>
-            <p className="mt-1 text-slate-500 dark:text-slate-400">Selamat datang kembali di pusat kendali SDM Anda.</p>
+            <h1 className="text-3xl font-bold text-slate-800 dark:text-white">Selamat Datang, {namaPengguna || "Admin"}!</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">Ini adalah ringkasan aktivitas perusahaan Anda.</p>
         </div>
-        <div className="flex items-center gap-2 w-full md:w-auto">
-             <div className="relative w-full md:w-64">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    {icons.cari}
-                </div>
-                <input
-                    type="text"
-                    placeholder="Cari pegawai..."
-                    className="w-full bg-white dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 rounded-lg py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                />
-            </div>
-            <button onClick={toggleDarkMode} className="p-2 rounded-lg bg-white dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+        <div className="flex items-center gap-3">
+            <button className="hidden sm:flex items-center gap-2 text-sm font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                {icons.cari}
+                <span>Cari...</span>
             </button>
+            <Link to="/create/user" className="flex items-center gap-2 text-sm font-semibold bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow-md">
+                {icons.plus}
+                <span>Tambah Pegawai</span>
+            </Link>
         </div>
     </div>
 );
 
-// --- [BARU] Komponen Chart Aktivitas ---
-const AktivitasChart = () => (
-    <div className="bg-white dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
-        <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Aktivitas Perekrutan</h2>
-        <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dataChart} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                    <defs>
-                        <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                        </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-                    <XAxis dataKey="name" stroke="currentColor" className="text-xs text-slate-500 dark:text-slate-400" />
-                    <YAxis stroke="currentColor" className="text-xs text-slate-500 dark:text-slate-400" />
-                    <Tooltip
-                        contentStyle={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                            backdropFilter: 'blur(5px)',
-                            border: '1px solid #ddd',
-                            borderRadius: '0.75rem',
-                            color: '#333'
-                        }}
-                    />
-                    <Area type="monotone" dataKey="Aktivitas" stroke="#8884d8" fillOpacity={1} fill="url(#colorUv)" />
-                </AreaChart>
-            </ResponsiveContainer>
+const RecentEmployeeList = ({ data }: RecentEmployeeListProps) => (
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+        <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold text-lg text-slate-800 dark:text-white">Pegawai Baru</h3>
+            <Link to="/data-karyawan" className="flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
+                Lihat Semua {icons.lihatSemua}
+            </Link>
         </div>
+        <ul className="space-y-4">
+            {data.map((p: Employee) => (
+                <li key={p.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <img src={p.image} alt={p.name} className="w-10 h-10 rounded-full object-cover" />
+                        <div>
+                            <p className="font-semibold text-slate-700 dark:text-slate-200">{p.name}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{p.role}</p>
+                        </div>
+                    </div>
+                    <button className="px-3 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/50 rounded-full">Lihat</button>
+                </li>
+            ))}
+        </ul>
     </div>
 );
 
-// --- [SEMPURNA] Komponen Tabel Pegawai dengan Animasi ---
-const TabelPegawai = ({ data }) => {
-    const tableVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.05
-            }
-        }
-    };
-    const rowVariants = {
-        hidden: { opacity: 0, y: 10 },
-        visible: { opacity: 1, y: 0 }
-    };
 
-    return (
-        <div className="bg-white dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Pegawai Baru</h2>
-                <a href="#" className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
-                    Lihat Semua {icons.lihatSemua}
-                </a>
-            </div>
-            <div className="overflow-x-auto">
-                <motion.table variants={tableVariants} initial="hidden" animate="visible" className="w-full text-left">
-                    <thead className="border-b-2 border-slate-100 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">
-                        <tr>
-                            <th className="p-3 font-semibold">Pegawai</th>
-                            <th className="p-3 font-semibold hidden md:table-cell">Jabatan</th>
-                            <th className="p-3 font-semibold text-right">Kontak</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {data.map((p) => (
-                            <motion.tr key={p.id} variants={rowVariants} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors duration-200 border-b border-slate-100 dark:border-slate-800 last:border-b-0">
-                                <td className="p-3">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white text-lg ${p.color}`}>{p.initial}</div>
-                                        <div>
-                                            <p className="font-semibold text-slate-800 dark:text-slate-100">{p.name}</p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 md:hidden">{p.role}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="p-3 align-middle text-slate-600 dark:text-slate-300 hidden md:table-cell">{p.role}</td>
-                                <td className="p-3 align-middle text-right text-sm text-slate-600 dark:text-slate-300 font-mono">{p.phone}</td>
-                            </motion.tr>
-                        ))}
-                    </tbody>
-                </motion.table>
-            </div>
-        </div>
-    );
-};
-
-
-// --- [SEMPURNA] Komponen Utama Dasbor ---
-const App = () => {
-    // const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
-    const [darkMode, setDarkMode] = useState(false);
-    const namaPenggunaAktif = "Aksamedia";
-
-    const [stats, setStats] = useState({
-        pegawai: 5,
-        divisi: 10,
-        rekrutmen: 2,
-        uptime: '99.9'
-    });
+const DashboardPage = () => {
+    useAuthGuard();
+    const [namaPengguna, setNamaPengguna] = useState<string | null>(null);
 
     useEffect(() => {
-        // Simulasi pengecekan login
-        // const sudahLogin = localStorage.getItem("isLoggedIn");
-        // if (sudahLogin !== "true") {
-        //     navigate("/login");
-        //     return;
-        // }
-
-        // Simulasi loading data
-        const timer = setTimeout(() => setLoading(false), 1500);
-
-        // [REAL-TIME] Simulasi data berubah
-        const interval = setInterval(() => {
-            setStats(prev => ({
-                ...prev,
-                uptime: (99.9 + Math.random() * 0.09).toFixed(2),
-                pegawai: Math.random() > 0.95 ? prev.pegawai + 1 : prev.pegawai,
-            }));
-        }, 5000);
-
-        return () => {
-            clearTimeout(timer);
-            clearInterval(interval);
-        };
-    }, []); // Dependensi kosong agar hanya berjalan sekali
-
-    useEffect(() => {
-        if (darkMode) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    }, [darkMode]);
-
-    const toggleDarkMode = () => setDarkMode(!darkMode);
-
-    if (loading) {
-        return <SkeletonLoader />;
-    }
-    
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1
-            }
-        }
-    };
+        const user = localStorage.getItem('activeUser');
+        setNamaPengguna(user);
+    }, []);
 
     return (
         <AnimatePresence>
             <motion.div
-                className="bg-slate-50 dark:bg-slate-950 font-['Inter',_sans-serif] min-h-screen transition-colors duration-300"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
             >
-                <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-                    <PageHeader namaPengguna={namaPenggunaAktif} darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <Header namaPengguna={namaPengguna} />
 
-                    <motion.div
-                        className="mt-8 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6"
-                        variants={containerVariants}
-                        initial="hidden"
-                        animate="visible"
-                    >
-                        <KartuStatistik ikon={icons.tim} label="Total Pegawai" nilai={stats.pegawai} detail="Pegawai aktif" gradasi="bg-gradient-to-br from-sky-500 to-indigo-600" />
-                        <KartuStatistik ikon={icons.divisi} label="Total Divisi" nilai={stats.divisi} detail="Departemen" gradasi="bg-gradient-to-br from-emerald-500 to-teal-600" />
-                        <KartuStatistik ikon={icons.rekrutmen} label="Rekrutmen" nilai={stats.rekrutmen} detail="Posisi terbuka" gradasi="bg-gradient-to-br from-amber-500 to-orange-600" />
-                        <KartuStatistik ikon={icons.uptime} label="Uptime" nilai={`${stats.uptime}%`} detail="Sistem stabil" gradasi="bg-gradient-to-br from-violet-500 to-purple-600" />
-                    </motion.div>
-
-                    <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                        {/* Kolom Konten Utama (lebih besar) */}
-                        <main className="lg:col-span-2 space-y-8">
-                            <AktivitasChart />
-                            <TabelPegawai data={dataPegawaiAwal} />
-                        </main>
-
-                        {/* Kolom Sidebar */}
-                        <aside className="lg:col-span-1 space-y-8">
-                             <div className="bg-white dark:bg-slate-800/50 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
-                                <h3 className="font-semibold text-lg text-slate-800 dark:text-white mb-4">Aksi Cepat</h3>
-                                <div className="space-y-3">
-                                    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-indigo-400/50 dark:shadow-indigo-900/50 shadow-lg">
-                                        {icons.plus} Tambah Pegawai
-                                    </motion.button>
-                                    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-semibold py-3 px-4 rounded-lg transition-colors">
-                                        {icons.pengaturan} Kelola Divisi
-                                    </motion.button>
-                                </div>
-                            </div>
-                             <div className="bg-white dark:bg-slate-800/50 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
-                                <h3 className="font-semibold text-lg text-slate-800 dark:text-white mb-4">Status Sistem</h3>
-                                <ul className="space-y-4 text-sm">
-                                    <li className="flex justify-between items-center text-slate-600 dark:text-slate-300">
-                                        <span className="flex items-center gap-2">{React.cloneElement(icons.check, { className: "text-green-500" })} API Utama</span>
-                                        <span className="font-semibold text-green-500">Operasional</span>
-                                    </li>
-                                     <li className="flex justify-between items-center text-slate-600 dark:text-slate-300">
-                                        <span className="flex items-center gap-2">{React.cloneElement(icons.check, { className: "text-green-500" })} Database</span>
-                                        <span className="font-semibold text-green-500">Tersambung</span>
-                                    </li>
-                                     <li className="flex justify-between items-center text-slate-600 dark:text-slate-300">
-                                        <span className="flex items-center gap-2">{React.cloneElement(icons.check, { className: "text-slate-400" })} Backup Terakhir</span>
-                                        <span className="font-semibold text-slate-500 dark:text-slate-400">1 jam lalu</span>
-                                    </li>
-                                </ul>
-                            </div>
-                        </aside>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <StatCard ikon={icons.tim} label="Total Pegawai" nilai="60" detail="+5 bulan ini" gradasi="bg-gradient-to-br from-indigo-500 to-blue-500" />
+                        <StatCard ikon={icons.divisi} label="Total Divisi" nilai="8" detail="2 baru ditambahkan" gradasi="bg-gradient-to-br from-purple-500 to-pink-500" />
+                        <StatCard ikon={icons.rekrutmen} label="Rekrutmen Baru" nilai="12" detail="Menunggu interview" gradasi="bg-gradient-to-br from-green-500 to-teal-500" />
+                        <StatCard ikon={icons.uptime} label="Uptime Server" nilai="99.9%" detail="Semua sistem normal" gradasi="bg-gradient-to-br from-yellow-500 to-orange-500" />
                     </div>
 
-                    <footer className="text-center mt-16 pt-8 pb-4">
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                            © {new Date().getFullYear()} Aksamedia Dashboard. Dibangun dengan ❤️
-                        </p>
-                    </footer>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                        <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg">
+                            <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-4">Pertumbuhan Karyawan</h3>
+                            <div style={{ width: '100%', height: 300 }}>
+                                <ResponsiveContainer>
+                                    <AreaChart data={dataGrafik} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                                                <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
+                                        <XAxis dataKey="name" tick={{ fill: 'rgb(100 116 139)', fontSize: 12 }} />
+                                        <YAxis tick={{ fill: 'rgb(100 116 139)', fontSize: 12 }} />
+                                        <Tooltip contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.8)', border: 'none', borderRadius: '0.5rem' }} />
+                                        <Area type="monotone" dataKey="Karyawan" stroke="#8884d8" fillOpacity={1} fill="url(#colorUv)" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        <RecentEmployeeList data={dataPegawaiAwal} />
+                    </div>
                 </div>
             </motion.div>
         </AnimatePresence>
     );
 };
 
-export default App;
-
+export default DashboardPage;
