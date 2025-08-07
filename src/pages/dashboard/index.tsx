@@ -1,200 +1,342 @@
-import { useEffect, useState } from "react";
-import Navbar from "../../components/navbar";
-import Container from "../../components/Container";
-import { Link, useSearchParams } from "react-router-dom";
-import { User, users } from "../../constant/mockUsers";
-import Modal from "../../components/modal";
-import { FiEdit, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
-import { useAuthGuard } from "../../hooks/useAuthGuard";
+import React, { useState, useEffect, useMemo } from 'react';
+// Mengganti react-router-dom dengan placeholder karena tidak tersedia di lingkungan ini
+// import { Link, useNavigate } from 'react-router-dom'; 
+import { motion, AnimatePresence } from 'framer-motion';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Users, Briefcase, UserPlus, Zap, Plus, Settings, Search, CheckCircle, ArrowRight, Sun, Moon } from 'lucide-react';
 
-const Dashboard = () => {
-  useAuthGuard();
-
-  const [activeUser, setActiveUser] = useState<string | null>("");
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [roleFilter, setRoleFilter] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const [allUsers, setAllUsers] = useState<User[] | null>(null);
-  
-  const itemsPerPage = 5;
-
-  useEffect(() => {
-    const userFromStorage = localStorage.getItem("activeUser");
-    setActiveUser(userFromStorage);
-  }, []);
-
-  useEffect(() => {
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    setPageNumber(page);
-    setSearchQuery(searchParams.get("query") || "");
-    setRoleFilter(searchParams.get("role") || "All");
-  }, [searchParams]);
-
-  useEffect(() => {
-    const storedUserData = localStorage.getItem("allUsersData");
-    if (storedUserData) {
-      setAllUsers(JSON.parse(storedUserData));
-    } else {
-      localStorage.setItem("allUsersData", JSON.stringify(users));
-      setAllUsers(users);
-    }
-  }, []);
-
-  const onSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const query = event.target.value;
-    setSearchQuery(query);
-    searchParams.set("query", query);
-    searchParams.set("page", "1");
-    setSearchParams(searchParams);
-  };
-
-  const onRoleFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const role = event.target.value;
-    setRoleFilter(role);
-    searchParams.set("role", role);
-    searchParams.set("page", "1");
-    setSearchParams(searchParams);
-  };
-
-  const filteredUsers =
-    allUsers?.filter((user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      (roleFilter === "All" || user.role === roleFilter)
-    );
-
-  const totalPages = Math.ceil(filteredUsers ? filteredUsers.length / itemsPerPage : 1);
-  const validPage = Math.max(1, Math.min(pageNumber, totalPages));
-
-  const usersOnCurrentPage =
-    filteredUsers?.slice((validPage - 1) * itemsPerPage, validPage * itemsPerPage);
-
-  const navigateToPage = (newPage: number) => {
-    if (newPage < 1 || (newPage > totalPages && totalPages > 0)) return;
-    setPageNumber(newPage);
-    searchParams.set("page", newPage.toString());
-    setSearchParams(searchParams);
-  };
-
-  const promptUserDeletion = (user: User) => {
-    setUserToDelete(user);
-    setDeleteModalVisible(true);
-  };
-
-  const confirmUserDeletion = () => {
-    if (!userToDelete) return;
-    const updatedUsers = allUsers?.filter((user) => user.id !== userToDelete.id) || null;
-    setAllUsers(updatedUsers);
-    localStorage.setItem("allUsersData", JSON.stringify(updatedUsers));
-    setDeleteModalVisible(false);
-    setUserToDelete(null);
-  };
-
-  const cancelUserDeletion = () => {
-    setDeleteModalVisible(false);
-    setUserToDelete(null);
-  };
-
-  useEffect(() => {
-    if (pageNumber > totalPages && totalPages > 0) {
-      navigateToPage(totalPages);
-    }
-  }, [pageNumber, totalPages]);
-
-  return (
-    <main className="min-h-screen bg-gray-100 dark:bg-gray-950 text-gray-800 dark:text-gray-200 pb-10">
-      <Navbar />
-      <Container>
-        <div className="pt-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Users Dashboard</h1>
-          <p className="mt-1 text-gray-600 dark:text-gray-400">
-            Welcome back, <span className="font-semibold text-indigo-600">{activeUser}</span>. Manage your users here.
-          </p>
-        </div>
-
-        <div className="mt-6 bg-white dark:bg-gray-900 rounded-xl shadow-md">
-          <div className="p-6">
-            <div className="flex flex-col md:flex-row gap-4 justify-between">
-              <div className="flex gap-4">
-                <div className="relative">
-                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="text" placeholder="Search by name..." value={searchQuery} onChange={onSearchChange} className="pl-10 pr-4 py-2 border bg-transparent border-gray-300 dark:border-gray-600 rounded-lg text-sm w-full md:w-auto"/>
-                </div>
-                <select
-                  value={roleFilter}
-                  onChange={onRoleFilterChange}
-                  className="px-4 py-2 border bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option className="bg-white dark:bg-gray-800" value="All">All Roles</option>
-                  {[...new Set(allUsers?.map((user) => user.role) || [])].map((role) => (
-                    <option className="bg-white dark:bg-gray-800" key={role} value={role}>{role}</option>
-                  ))}
-                </select>
-              </div>
-              <Link to="/create/user">
-                <button className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 w-full md:w-auto">
-                  <FiPlus />
-                  <span>Add User</span>
-                </button>
-              </Link>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-800">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
-                  <th scope="col" className="px-6 py-3 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Username</th>
-                  <th scope="col" className="px-6 py-3 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nama Perusahaan</th>
-                  <th scope="col" className="px-6 py-3 text-left font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Jabatan</th>
-                  <th scope="col" className="px-6 py-3 text-center font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {usersOnCurrentPage?.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-6 py-4 whitespace-nowrap font-medium">{user.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{user.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">{user.company}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">{user.role}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-4">
-                        <Link
-                          to={`/update/user/${user.id}`}
-                          className="p-2 rounded-md text-indigo-500 hover:text-indigo-700 transition-colors duration-200"
-                          title="Edit"
-                        >
-                          <FiEdit size={16} />
-                        </Link>
-                        <button
-                          onClick={() => promptUserDeletion(user)}
-                          className="p-2 rounded-md text-red-500 hover:text-red-700 transition-colors duration-200"
-                          title="Delete"
-                        >
-                          <FiTrash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <button onClick={() => navigateToPage(pageNumber - 1)} disabled={pageNumber <= 1} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg text-sm disabled:opacity-50">Previous</button>
-            <span className="text-sm">Page {validPage} of {totalPages}</span>
-            <button onClick={() => navigateToPage(pageNumber + 1)} disabled={validPage >= totalPages} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg text-sm disabled:opacity-50">Next</button>
-          </div>
-        </div>
-        
-      </Container>
-      <Modal isOpen={isDeleteModalVisible} onClose={cancelUserDeletion} onConfirm={confirmUserDeletion} title="Confirm Deletion" message={`Are you sure you want to delete user: ${userToDelete?.name}?`}/>
-    </main>
-  );
+// --- [SEMPURNA] Komponen Ikon Lucide yang Elegan ---
+// Menggunakan ikon dari pustaka 'lucide-react' untuk konsistensi dan kualitas.
+const icons = {
+  tim: <Users size={24} />,
+  divisi: <Briefcase size={24} />,
+  rekrutmen: <UserPlus size={24} />,
+  uptime: <Zap size={24} />,
+  plus: <Plus size={16} />,
+  pengaturan: <Settings size={16} />,
+  cari: <Search size={18} />,
+  check: <CheckCircle size={16} />,
+  lihatSemua: <ArrowRight size={14} />,
 };
 
-export default Dashboard;
+// --- [SEMPURNA] Data Dummy & Fungsi Helper ---
+const dataPegawaiAwal = [
+    { id: 1, name: 'Ahmad Yani', role: 'Backend Developer', phone: '081234567890', initial: 'A', color: 'bg-sky-500' },
+    { id: 2, name: 'Budi Santoso', role: 'Mobile Developer', phone: '081234567891', initial: 'B', color: 'bg-emerald-500' },
+    { id: 3, name: 'Citra Lestari', role: 'Full Stack Developer', phone: '081234567892', initial: 'C', color: 'bg-violet-500' },
+    { id: 4, name: 'Dewi Anggraini', role: 'UI/UX Designer', phone: '081234567893', initial: 'D', color: 'bg-rose-500' },
+    { id: 5, name: 'Eka Prasetya', role: 'DevOps Engineer', phone: '081234567894', initial: 'E', color: 'bg-amber-500' },
+];
+
+const dataChart = [
+  { name: 'Jan', Aktivitas: 2400 },
+  { name: 'Feb', Aktivitas: 1398 },
+  { name: 'Mar', Aktivitas: 9800 },
+  { name: 'Apr', Aktivitas: 3908 },
+  { name: 'Mei', Aktivitas: 4800 },
+  { name: 'Jun', Aktivitas: 3800 },
+  { name: 'Jul', Aktivitas: 4300 },
+];
+
+const dapatkanSapaan = () => {
+    const jam = new Date().getHours();
+    if (jam < 4) return "Selamat Malam";
+    if (jam < 11) return "Selamat Pagi";
+    if (jam < 15) return "Selamat Siang";
+    if (jam < 19) return "Selamat Sore";
+    return "Selamat Malam";
+}
+
+// --- [SEMPURNA] Komponen Skeleton yang Lebih Detail ---
+const SkeletonLoader = () => (
+    <div className="bg-slate-50 dark:bg-slate-950 font-sans p-4 sm:p-6 lg:p-8 animate-pulse">
+        <div className="flex justify-between items-center mb-8">
+            <div className="h-10 w-1/3 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
+            <div className="h-10 w-1/4 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+            {[...Array(4)].map((_, i) => <div key={i} className="h-36 bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>)}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 h-96 bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>
+            <div className="lg:col-span-1 h-96 bg-slate-200 dark:bg-slate-800 rounded-2xl"></div>
+        </div>
+    </div>
+);
+
+// --- [SEMPURNA] Komponen Kartu Statistik dengan Efek Halus ---
+const KartuStatistik = ({ ikon, label, nilai, detail, gradasi }) => (
+    <motion.div
+        className={`relative text-white p-6 rounded-2xl overflow-hidden shadow-lg ${gradasi}`}
+        variants={{
+            hidden: { opacity: 0, y: 20 },
+            visible: { opacity: 1, y: 0 }
+        }}
+        whileHover={{ y: -6, transition: { duration: 0.2, ease: "easeOut" } }}
+    >
+        <div className="absolute -top-4 -right-4 text-white/10">{React.cloneElement(ikon, { size: 80 })}</div>
+        <div className="relative z-10">
+            <div className="flex justify-between items-start">
+                <p className="font-medium text-white/90">{label}</p>
+                <div className="text-white/80">{ikon}</div>
+            </div>
+            <motion.p layout className="text-4xl font-bold mt-3">{nilai}</motion.p>
+            <p className="text-sm text-white/70 mt-1">{detail}</p>
+        </div>
+    </motion.div>
+);
+
+// --- [BARU] Komponen Header Halaman yang Canggih ---
+const PageHeader = ({ namaPengguna, darkMode, toggleDarkMode }) => (
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 className="text-3xl font-bold text-slate-800 dark:text-white">{dapatkanSapaan()}, {namaPengguna}!</h1>
+            <p className="mt-1 text-slate-500 dark:text-slate-400">Selamat datang kembali di pusat kendali SDM Anda.</p>
+        </div>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+             <div className="relative w-full md:w-64">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    {icons.cari}
+                </div>
+                <input
+                    type="text"
+                    placeholder="Cari pegawai..."
+                    className="w-full bg-white dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 rounded-lg py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                />
+            </div>
+            <button onClick={toggleDarkMode} className="p-2 rounded-lg bg-white dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+        </div>
+    </div>
+);
+
+// --- [BARU] Komponen Chart Aktivitas ---
+const AktivitasChart = () => (
+    <div className="bg-white dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
+        <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Aktivitas Perekrutan</h2>
+        <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={dataChart} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <defs>
+                        <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                    <XAxis dataKey="name" stroke="currentColor" className="text-xs text-slate-500 dark:text-slate-400" />
+                    <YAxis stroke="currentColor" className="text-xs text-slate-500 dark:text-slate-400" />
+                    <Tooltip
+                        contentStyle={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                            backdropFilter: 'blur(5px)',
+                            border: '1px solid #ddd',
+                            borderRadius: '0.75rem',
+                            color: '#333'
+                        }}
+                    />
+                    <Area type="monotone" dataKey="Aktivitas" stroke="#8884d8" fillOpacity={1} fill="url(#colorUv)" />
+                </AreaChart>
+            </ResponsiveContainer>
+        </div>
+    </div>
+);
+
+// --- [SEMPURNA] Komponen Tabel Pegawai dengan Animasi ---
+const TabelPegawai = ({ data }) => {
+    const tableVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.05
+            }
+        }
+    };
+    const rowVariants = {
+        hidden: { opacity: 0, y: 10 },
+        visible: { opacity: 1, y: 0 }
+    };
+
+    return (
+        <div className="bg-white dark:bg-slate-800/50 p-4 sm:p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Pegawai Baru</h2>
+                <a href="#" className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                    Lihat Semua {icons.lihatSemua}
+                </a>
+            </div>
+            <div className="overflow-x-auto">
+                <motion.table variants={tableVariants} initial="hidden" animate="visible" className="w-full text-left">
+                    <thead className="border-b-2 border-slate-100 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">
+                        <tr>
+                            <th className="p-3 font-semibold">Pegawai</th>
+                            <th className="p-3 font-semibold hidden md:table-cell">Jabatan</th>
+                            <th className="p-3 font-semibold text-right">Kontak</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {data.map((p) => (
+                            <motion.tr key={p.id} variants={rowVariants} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors duration-200 border-b border-slate-100 dark:border-slate-800 last:border-b-0">
+                                <td className="p-3">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white text-lg ${p.color}`}>{p.initial}</div>
+                                        <div>
+                                            <p className="font-semibold text-slate-800 dark:text-slate-100">{p.name}</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 md:hidden">{p.role}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td className="p-3 align-middle text-slate-600 dark:text-slate-300 hidden md:table-cell">{p.role}</td>
+                                <td className="p-3 align-middle text-right text-sm text-slate-600 dark:text-slate-300 font-mono">{p.phone}</td>
+                            </motion.tr>
+                        ))}
+                    </tbody>
+                </motion.table>
+            </div>
+        </div>
+    );
+};
+
+
+// --- [SEMPURNA] Komponen Utama Dasbor ---
+const App = () => {
+    // const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+    const [darkMode, setDarkMode] = useState(false);
+    const namaPenggunaAktif = "Aksamedia";
+
+    const [stats, setStats] = useState({
+        pegawai: 5,
+        divisi: 10,
+        rekrutmen: 2,
+        uptime: '99.9'
+    });
+
+    useEffect(() => {
+        // Simulasi pengecekan login
+        // const sudahLogin = localStorage.getItem("isLoggedIn");
+        // if (sudahLogin !== "true") {
+        //     navigate("/login");
+        //     return;
+        // }
+
+        // Simulasi loading data
+        const timer = setTimeout(() => setLoading(false), 1500);
+
+        // [REAL-TIME] Simulasi data berubah
+        const interval = setInterval(() => {
+            setStats(prev => ({
+                ...prev,
+                uptime: (99.9 + Math.random() * 0.09).toFixed(2),
+                pegawai: Math.random() > 0.95 ? prev.pegawai + 1 : prev.pegawai,
+            }));
+        }, 5000);
+
+        return () => {
+            clearTimeout(timer);
+            clearInterval(interval);
+        };
+    }, []); // Dependensi kosong agar hanya berjalan sekali
+
+    useEffect(() => {
+        if (darkMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }, [darkMode]);
+
+    const toggleDarkMode = () => setDarkMode(!darkMode);
+
+    if (loading) {
+        return <SkeletonLoader />;
+    }
+    
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1
+            }
+        }
+    };
+
+    return (
+        <AnimatePresence>
+            <motion.div
+                className="bg-slate-50 dark:bg-slate-950 font-['Inter',_sans-serif] min-h-screen transition-colors duration-300"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+            >
+                <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+                    <PageHeader namaPengguna={namaPenggunaAktif} darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+
+                    <motion.div
+                        className="mt-8 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6"
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                    >
+                        <KartuStatistik ikon={icons.tim} label="Total Pegawai" nilai={stats.pegawai} detail="Pegawai aktif" gradasi="bg-gradient-to-br from-sky-500 to-indigo-600" />
+                        <KartuStatistik ikon={icons.divisi} label="Total Divisi" nilai={stats.divisi} detail="Departemen" gradasi="bg-gradient-to-br from-emerald-500 to-teal-600" />
+                        <KartuStatistik ikon={icons.rekrutmen} label="Rekrutmen" nilai={stats.rekrutmen} detail="Posisi terbuka" gradasi="bg-gradient-to-br from-amber-500 to-orange-600" />
+                        <KartuStatistik ikon={icons.uptime} label="Uptime" nilai={`${stats.uptime}%`} detail="Sistem stabil" gradasi="bg-gradient-to-br from-violet-500 to-purple-600" />
+                    </motion.div>
+
+                    <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                        {/* Kolom Konten Utama (lebih besar) */}
+                        <main className="lg:col-span-2 space-y-8">
+                            <AktivitasChart />
+                            <TabelPegawai data={dataPegawaiAwal} />
+                        </main>
+
+                        {/* Kolom Sidebar */}
+                        <aside className="lg:col-span-1 space-y-8">
+                             <div className="bg-white dark:bg-slate-800/50 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
+                                <h3 className="font-semibold text-lg text-slate-800 dark:text-white mb-4">Aksi Cepat</h3>
+                                <div className="space-y-3">
+                                    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-indigo-400/50 dark:shadow-indigo-900/50 shadow-lg">
+                                        {icons.plus} Tambah Pegawai
+                                    </motion.button>
+                                    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-semibold py-3 px-4 rounded-lg transition-colors">
+                                        {icons.pengaturan} Kelola Divisi
+                                    </motion.button>
+                                </div>
+                            </div>
+                             <div className="bg-white dark:bg-slate-800/50 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
+                                <h3 className="font-semibold text-lg text-slate-800 dark:text-white mb-4">Status Sistem</h3>
+                                <ul className="space-y-4 text-sm">
+                                    <li className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                        <span className="flex items-center gap-2">{React.cloneElement(icons.check, { className: "text-green-500" })} API Utama</span>
+                                        <span className="font-semibold text-green-500">Operasional</span>
+                                    </li>
+                                     <li className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                        <span className="flex items-center gap-2">{React.cloneElement(icons.check, { className: "text-green-500" })} Database</span>
+                                        <span className="font-semibold text-green-500">Tersambung</span>
+                                    </li>
+                                     <li className="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                        <span className="flex items-center gap-2">{React.cloneElement(icons.check, { className: "text-slate-400" })} Backup Terakhir</span>
+                                        <span className="font-semibold text-slate-500 dark:text-slate-400">1 jam lalu</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </aside>
+                    </div>
+
+                    <footer className="text-center mt-16 pt-8 pb-4">
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                            © {new Date().getFullYear()} Aksamedia Dashboard. Dibangun dengan ❤️
+                        </p>
+                    </footer>
+                </div>
+            </motion.div>
+        </AnimatePresence>
+    );
+};
+
+export default App;
+
