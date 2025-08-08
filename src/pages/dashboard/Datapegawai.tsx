@@ -146,7 +146,8 @@ const EmployeeListPage = () => {
             headers: { Authorization: `Bearer ${authToken}` },
         });
         toast.success("Data pegawai berhasil dihapus.", { id: toastId });
-        fetchEmployees(meta?.current_page); // Muat ulang data
+        // SOLUSI: Beri nilai fallback 1 jika meta atau current_page tidak ada
+        fetchEmployees(meta?.current_page || 1); 
     } catch (error) {
         toast.error("Gagal menghapus data.", { id: toastId });
     } finally {
@@ -154,6 +155,7 @@ const EmployeeListPage = () => {
     }
   };
 
+  // SOLUSI: Tambahkan tipe 'number' pada parameter page
   const handlePageChange = (page: number) => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set('page', page.toString());

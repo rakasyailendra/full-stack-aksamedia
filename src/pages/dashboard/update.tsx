@@ -1,3 +1,5 @@
+// File: src/pages/dashboard/update.tsx (Versi Final - Sudah Benar)
+
 import { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -141,7 +143,7 @@ const UpdateEmployeePage = () => {
                 </select>
                 {errors.division_id && <p className="text-xs text-red-500 mt-2">{errors.division_id.message}</p>}
               </div>
-               <div>
+                <div>
                 <label htmlFor="image" className="block mb-2 text-sm font-medium">Foto Profil (Opsional)</label>
                 <input type="file" id="image" {...register("image")} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/>
               </div>
